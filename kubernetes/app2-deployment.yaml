@@ -1,0 +1,104 @@
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: app2
+  namespace: default
+spec:
+  # Setting up number of replicas
+  # We can define replicas either project wise or app wise.
+  # This is an example of setting all apps in project to have 2 replicas:
+  # replicas: 2
+  # This is example of setting different replicas for different apps:
+  # esi-data-application-replicas: 2
+  # esi-data-workflow-replicas: 3
+  # These configurations go in {project}-config.yaml file
+  #
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app2
+  template:
+    metadata:
+      labels:
+        app: app2
+        version: "0.0.1-SNAPSHOT"
+        gitVersion: "gitVersionHere"
+        buildTime: "2019-02-10_15-46-23"
+    spec:
+      serviceAccount: zuulapp
+      volumes:
+      - name: shared-dir
+        persistentVolumeClaim:
+          claimName: shared-dir
+      - name: ssl-certificate-volume
+        configMap:
+          name: ssl-certificate
+      - name: tnsnames-volume
+        configMap:
+          name: oracle
+          items:
+          - key: tnsnames.ora
+            path: tnsnames.ora
+      
+      containers:
+      - name: app2
+        image: iadartifsit01.evolvsuite.local:5000/libs-snapshot-local/0.0.1-snapshot/app2
+        imagePullPolicy: Always
+        
+        env:
+        # Sets up environment variables in container
+        # We may pass environment variables in two ways in project-config.yaml file.
+        # We can either use env map to provide it like this:
+        # env:
+        #   JAVA_OPTS: -Xmxs:1024m
+        # This will apply to all apps in project.
+        # Another method is to define app or deployment name before env like this:
+        # esi-data-application-env:
+        #   JAVA_OPTS: -Xmxs:1024m
+        # esi-data-workflow-env:
+        #   JAVA_OPTS: -Xmxs:2048m
+        # This allows us to define two different env settings for both
+        #
+        
+        
+        - name: ESB_ADMIN_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: esb
+              key: username
+        - name: ADMIN_TENANT
+          valueFrom:
+            configMapKeyRef:
+              name: esb
+              key: adminTenant
+        - name: ESB_ADMIN_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: esb
+              key: password
+        - name: ESB_URL
+          valueFrom:
+            configMapKeyRef:
+              name: esb
+              key: url
+        - name: ESB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: esb
+              key: host
+        - name: TNS_ADMIN
+          value: /opt/evolv/oracle
+        volumeMounts:
+          - name: shared-dir
+            mountPath: "/shared-dir"
+          - name: ssl-certificate-volume
+            mountPath: /opt/evolv/cert
+          - name: tnsnames-volume
+            mountPath: /opt/evolv/oracle
+        ports:
+        # Ports to open.
+        
+        
+        - containerPort: 8443
+        

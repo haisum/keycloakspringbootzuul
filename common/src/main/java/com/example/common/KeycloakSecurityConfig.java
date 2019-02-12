@@ -10,8 +10,9 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 @Configuration
 @EnableWebSecurity
 @Order
-public class KeycloakSecurityConfig extends AbstractSecurityConfig {
+public class KeycloakSecurityConfig extends AbstractKeycloakSecurityConfig {
 
+    @Override
     protected void configure(HttpSecurity http) throws  Exception{
         super.configure(http);
     }

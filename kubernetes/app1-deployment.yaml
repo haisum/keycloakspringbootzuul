@@ -2,8 +2,8 @@
 apiVersion: apps/v1beta2
 kind: Deployment
 metadata:
-  name: {{ if index . "deploymentName" }}{{.deploymentName}}{{else}}{{.appName}}{{end}}
-  namespace: {{ if index . "namespace" }}{{.namespace}}{{else}}default{{end}}
+  name: app1
+  namespace: default
 spec:
   # Setting up number of replicas
   # We can define replicas either project wise or app wise.
@@ -14,19 +14,19 @@ spec:
   # esi-data-workflow-replicas: 3
   # These configurations go in {project}-config.yaml file
   #
-  replicas: {{ or (index . (print (default .appName "deploymentName") "-replicas") )  ( default 1 "replicas" ) }}
+  replicas: 1
   selector:
     matchLabels:
-      app: {{ if index . "deploymentName" }}{{.deploymentName}}{{else}}{{.appName}}{{end}}
+      app: app1
   template:
     metadata:
       labels:
-        app: {{ if index . "deploymentName" }}{{.deploymentName}}{{else}}{{.appName}}{{end}}
-        version: "{{ .version }}"
-        gitVersion: "{{ .gitVersion }}"
-        buildTime: "{{ toDate "2006-01-02T15:04:05Z07:00" .buildTime | date "2006-01-02_15-04-05" }}"
+        app: app1
+        version: "0.0.1-SNAPSHOT"
+        gitVersion: "gitVersionHere"
+        buildTime: "2019-02-10_15-46-23"
     spec:
-      serviceAccount: {{ if index . "serviceAccount" }}{{.serviceAccount}}{{else}}default{{end}}
+      serviceAccount: zuulapp
       volumes:
       - name: shared-dir
         persistentVolumeClaim:
@@ -40,21 +40,12 @@ spec:
           items:
           - key: tnsnames.ora
             path: tnsnames.ora
-      {{ if index . (print (default .appName "deploymentName") "-nodeSelector") }}
-      nodeSelector:
-      {{ range $name, $value := (index . (print (default .appName "deploymentName") "-nodeSelector")) }}
-        {{ $name }}: {{ $value }}
-      {{ end }}
-      {{ end }}
+      
       containers:
-      - name: {{ if index . "deploymentName" }}{{.deploymentName}}{{else}}{{.appName}}{{end}}
-        image: {{ .artifactoryURL }}/{{ .repository | lower }}/{{ .version | lower }}/{{ .appName }}
+      - name: app1
+        image: iadartifsit01.evolvsuite.local:5000/libs-snapshot-local/0.0.1-snapshot/app1
         imagePullPolicy: Always
-        {{ if index . (print (default .appName "deploymentName") "-minMemory") }}
-        resources:
-          requests:
-            memory: {{ index . (print (default .appName "deploymentName") "-minMemory") }}
-        {{ end }}
+        
         env:
         # Sets up environment variables in container
         # We may pass environment variables in two ways in project-config.yaml file.
@@ -69,18 +60,8 @@ spec:
         #   JAVA_OPTS: -Xmxs:2048m
         # This allows us to define two different env settings for both
         #
-        {{ if index . "env" }}
-        {{ range $name, $value := .env }}
-        - name: {{ $name }}
-          value: {{ $value }}
-        {{ end }}
-        {{ end }}
-        {{ if index . (print (default .appName "deploymentName") "-env") }}
-        {{ range $name, $value := (index . (print (default .appName "deploymentName") "-env")) }}
-        - name: {{ $name }}
-          value: {{ $value }}
-        {{ end }}
-        {{ end }}
+        
+        
         - name: ESB_ADMIN_USERNAME
           valueFrom:
             configMapKeyRef:
@@ -117,13 +98,7 @@ spec:
             mountPath: /opt/evolv/oracle
         ports:
         # Ports to open.
-        {{ if index . "ports" }}
-        {{ range .ports }}
-        - containerPort: {{ .targetPort }}
-        {{ end }}
-        {{ end }}
-        {{ if index . "serverPort" }}
-        - containerPort: {{ .serverPort }}
-        {{ else }}
+        
+        
         - containerPort: 8443
-        {{ end }}
+        

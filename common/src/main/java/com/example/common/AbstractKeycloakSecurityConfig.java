@@ -22,17 +22,20 @@ import org.springframework.security.web.authentication.session.SessionAuthentica
         basePackageClasses = KeycloakSecurityComponents.class,
         excludeFilters = @ComponentScan.Filter(type = FilterType.REGEX, pattern = "org.keycloak.adapters.springsecurity.management.HttpSessionManager"))
 @PropertySource(value = "classpath:keycloak.properties")
-public abstract class AbstractSecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
+public abstract class AbstractKeycloakSecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws  Exception{
         super.configure(http);
         http.authorizeRequests()
                 .antMatchers(HttpMethod.OPTIONS,"/**").permitAll() // for cors
-                .antMatchers("/actuator/health").permitAll()
-                .antMatchers("/actuator").permitAll()
-                .antMatchers("/actuator/**").hasRole("ADMIN")
-                .antMatchers("/", "/**").authenticated();
-
+                .antMatchers("/**/actuator/health").permitAll()
+                .antMatchers("/**/actuator/info").permitAll()
+                .antMatchers("/**/actuator").permitAll()
+                .antMatchers("/**/actuator/**").hasRole("ADMIN")
+                .antMatchers("/", "/**").authenticated()
+                .and()
+                .csrf()
+                .ignoringAntMatchers("**/actuator/**");
     }
 
     /**
