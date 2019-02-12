@@ -1,0 +1,28 @@
+---
+import:
+- example-config.yaml
+
+global:
+  artifactoryURL: @env.DOCKER_REGISTRY_URL@
+  repository: libs-snapshot-local
+  version: @project.version@
+  gitVersion: gitVersionHere
+  buildTime: @maven.build.timestamp@
+  serverPort: 8443
+
+include:
+
+- name: app1
+  path: application
+  values:
+    appName: app1
+
+- name: app2
+  path: application
+  values:
+    appName: app2
+
+- name: zullapp
+  path: application
+  values:
+    appName: zullapp

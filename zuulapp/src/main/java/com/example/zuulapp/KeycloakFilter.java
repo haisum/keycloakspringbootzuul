@@ -4,6 +4,7 @@ import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
 import org.keycloak.adapters.RefreshableKeycloakSecurityContext;
 import org.keycloak.adapters.springsecurity.token.KeycloakAuthenticationToken;
+import org.springframework.cloud.netflix.zuul.filters.support.FilterConstants;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -13,7 +14,7 @@ class KeycloakFilter extends ZuulFilter {
 
     @Override
     public String filterType() {
-        return "route";
+        return FilterConstants.ROUTE_TYPE;
     }
 
     @Override

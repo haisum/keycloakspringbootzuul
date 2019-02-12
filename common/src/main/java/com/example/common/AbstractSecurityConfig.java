@@ -1,4 +1,4 @@
-package com.example.keycloaktestapp;
+package com.example.common;
 
 import org.keycloak.adapters.KeycloakConfigResolver;
 import org.keycloak.adapters.springboot.KeycloakSpringBootConfigResolver;
@@ -9,38 +9,30 @@ import org.keycloak.adapters.springsecurity.filter.KeycloakAuthenticationProcess
 import org.keycloak.adapters.springsecurity.filter.KeycloakPreAuthActionsFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.FilterType;
+import org.springframework.context.annotation.*;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.authority.mapping.SimpleAuthorityMapper;
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.web.authentication.session.RegisterSessionAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 
-@Configuration
-@EnableWebSecurity
 @ComponentScan(
         basePackageClasses = KeycloakSecurityComponents.class,
         excludeFilters = @ComponentScan.Filter(type = FilterType.REGEX, pattern = "org.keycloak.adapters.springsecurity.management.HttpSessionManager"))
-public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
-
-
-
+@PropertySource(value = "classpath:keycloak.properties")
+public abstract class AbstractSecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws  Exception{
         super.configure(http);
         http.authorizeRequests()
-                .antMatchers("/secure").authenticated()
-                .antMatchers("/actuator").permitAll()
+                .antMatchers(HttpMethod.OPTIONS,"/**").permitAll() // for cors
                 .antMatchers("/actuator/health").permitAll()
+                .antMatchers("/actuator").permitAll()
                 .antMatchers("/actuator/**").hasRole("ADMIN")
-                .antMatchers("/", "/**").permitAll()
-                .and()
-                .formLogin();
+                .antMatchers("/", "/**").authenticated();
+
     }
 
     /**
@@ -83,4 +75,5 @@ public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
         registrationBean.setEnabled(false);
         return registrationBean;
     }
+
 }

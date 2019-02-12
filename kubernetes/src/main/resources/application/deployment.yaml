@@ -1,0 +1,129 @@
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ if index . "deploymentName" }}{{.deploymentName}}{{else}}{{.appName}}{{end}}
+  namespace: {{ if index . "namespace" }}{{.namespace}}{{else}}default{{end}}
+spec:
+  # Setting up number of replicas
+  # We can define replicas either project wise or app wise.
+  # This is an example of setting all apps in project to have 2 replicas:
+  # replicas: 2
+  # This is example of setting different replicas for different apps:
+  # esi-data-application-replicas: 2
+  # esi-data-workflow-replicas: 3
+  # These configurations go in {project}-config.yaml file
+  #
+  replicas: {{ or (index . (print (default .appName "deploymentName") "-replicas") )  ( default 1 "replicas" ) }}
+  selector:
+    matchLabels:
+      app: {{ if index . "deploymentName" }}{{.deploymentName}}{{else}}{{.appName}}{{end}}
+  template:
+    metadata:
+      labels:
+        app: {{ if index . "deploymentName" }}{{.deploymentName}}{{else}}{{.appName}}{{end}}
+        version: "{{ .version }}"
+        gitVersion: "{{ .gitVersion }}"
+        buildTime: "{{ toDate "2006-01-02T15:04:05Z07:00" .buildTime | date "2006-01-02_15-04-05" }}"
+    spec:
+      serviceAccount: {{ if index . "serviceAccount" }}{{.serviceAccount}}{{else}}default{{end}}
+      volumes:
+      - name: shared-dir
+        persistentVolumeClaim:
+          claimName: shared-dir
+      - name: ssl-certificate-volume
+        configMap:
+          name: ssl-certificate
+      - name: tnsnames-volume
+        configMap:
+          name: oracle
+          items:
+          - key: tnsnames.ora
+            path: tnsnames.ora
+      {{ if index . (print (default .appName "deploymentName") "-nodeSelector") }}
+      nodeSelector:
+      {{ range $name, $value := (index . (print (default .appName "deploymentName") "-nodeSelector")) }}
+        {{ $name }}: {{ $value }}
+      {{ end }}
+      {{ end }}
+      containers:
+      - name: {{ if index . "deploymentName" }}{{.deploymentName}}{{else}}{{.appName}}{{end}}
+        image: {{ .artifactoryURL }}/{{ .repository | lower }}/{{ .version | lower }}/{{ .appName }}
+        imagePullPolicy: Always
+        {{ if index . (print (default .appName "deploymentName") "-minMemory") }}
+        resources:
+          requests:
+            memory: {{ index . (print (default .appName "deploymentName") "-minMemory") }}
+        {{ end }}
+        env:
+        # Sets up environment variables in container
+        # We may pass environment variables in two ways in project-config.yaml file.
+        # We can either use env map to provide it like this:
+        # env:
+        #   JAVA_OPTS: -Xmxs:1024m
+        # This will apply to all apps in project.
+        # Another method is to define app or deployment name before env like this:
+        # esi-data-application-env:
+        #   JAVA_OPTS: -Xmxs:1024m
+        # esi-data-workflow-env:
+        #   JAVA_OPTS: -Xmxs:2048m
+        # This allows us to define two different env settings for both
+        #
+        {{ if index . "env" }}
+        {{ range $name, $value := .env }}
+        - name: {{ $name }}
+          value: {{ $value }}
+        {{ end }}
+        {{ end }}
+        {{ if index . (print (default .appName "deploymentName") "-env") }}
+        {{ range $name, $value := (index . (print (default .appName "deploymentName") "-env")) }}
+        - name: {{ $name }}
+          value: {{ $value }}
+        {{ end }}
+        {{ end }}
+        - name: ESB_ADMIN_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: esb
+              key: username
+        - name: ADMIN_TENANT
+          valueFrom:
+            configMapKeyRef:
+              name: esb
+              key: adminTenant
+        - name: ESB_ADMIN_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: esb
+              key: password
+        - name: ESB_URL
+          valueFrom:
+            configMapKeyRef:
+              name: esb
+              key: url
+        - name: ESB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: esb
+              key: host
+        - name: TNS_ADMIN
+          value: /opt/evolv/oracle
+        volumeMounts:
+          - name: shared-dir
+            mountPath: "/shared-dir"
+          - name: ssl-certificate-volume
+            mountPath: /opt/evolv/cert
+          - name: tnsnames-volume
+            mountPath: /opt/evolv/oracle
+        ports:
+        # Ports to open.
+        {{ if index . "ports" }}
+        {{ range .ports }}
+        - containerPort: {{ .targetPort }}
+        {{ end }}
+        {{ end }}
+        {{ if index . "serverPort" }}
+        - containerPort: {{ .serverPort }}
+        {{ else }}
+        - containerPort: 8443
+        {{ end }}
